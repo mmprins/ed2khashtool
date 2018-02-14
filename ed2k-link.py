@@ -18,8 +18,7 @@ def chunks_do_hash(chunk_tuple):
     '''chunk_tuple数据格式:(chunks块数据,chunks块编号,queue对象);
     非空取值chunks数据块，计算md4后加入queue队列。queue对象数据
     格式：{chunks块编号:chunks块hash值}'''
-    if chunk_tuple[0]:
-        chunk_tuple[2].put({chunk_tuple[1]:hashlib.new('md4',chunk_tuple[0]).digest()})
+    chunk_tuple[2].put({chunk_tuple[1]:hashlib.new('md4',chunk_tuple[0]).digest()})
 def chunks_split(fp):
     '''依赖模块：mainwork()。对文件对象进行chunks分割操作，按照ed2k协议
     要求，每个chunks分区大小为9728000字节。本函数根据系统cpu数量，生成对
@@ -31,6 +30,7 @@ def chunks_split(fp):
         if chunkbytes:
             chunk_bytes_list.append(chunkbytes)
         else:#fp读结束后继续填充None,???
+            #有可能会产生[b'xyz',None]和[None]两种特殊填充值list对象
             chunk_bytes_list.append(None)
             break#中断list填充操作，list长度将小于实际cpu数量
 def queue_get(q):
@@ -74,7 +74,7 @@ def mainwork(filename):
             #根据chunks_split函数重置变量chunk_bytes_list的实际长度申请Pool
             p=Pool(len(chunk_bytes_list))
             for i in range(len(chunk_bytes_list)):
-                if chunk_bytes_list[i]:
+                if chunk_bytes_list[i]:#过滤掉list变量中出现的None值
                     p.apply_async(chunks_do_hash,args=((chunk_bytes_list[i],CHUNKS_TOTAL_COUNT,q),))
                     #每一个非空值的chunk_bytes_list的值增加一个
                     #CHUNKS_TOTAL_COUNT的编号计数。
