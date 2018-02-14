@@ -70,7 +70,8 @@ def mainwork(filename):
     with open(filename,'rb') as fp:
         chunk_bytes_list=[True]#初始化变量用于起始循环
         while chunk_bytes_list[0]:#直到fp读完，chunk_bytes_list被填充为None
-            chunks_split(fp)#调用函数chunks_split并重置chunk_bytes_list
+            chunks_split(fp)#调用函数chunks_split并将重置chunk_bytes_list
+            #根据chunks_split函数重置变量chunk_bytes_list的实际长度申请Pool
             p=Pool(len(chunk_bytes_list))
             for i in range(len(chunk_bytes_list)):
                 if chunk_bytes_list[i]:
@@ -79,7 +80,7 @@ def mainwork(filename):
                     #CHUNKS_TOTAL_COUNT的编号计数。
                     CHUNKS_TOTAL_COUNT+=1
             p.close()
-            p.join()#chunks_do_hash子进程全部完成后继续
+            p.join()#chunks_do_hash子进程全部完成后继续操作fp重新申请进程池
         FILESIZE=fp.tell()
 if __name__ == '__main__':
     q=Manager().Queue()
