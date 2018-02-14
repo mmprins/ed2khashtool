@@ -7,7 +7,6 @@ import binascii
 from multiprocessing import Pool,Manager
 from urllib import parse
 ARGS=sys.argv
-FILENAME=os.path.split(ARGS[1])[-1]
 FILESIZE=0
 CPU_COUNT=os.cpu_count()
 CHUNKS_TOTAL_COUNT=0
@@ -67,24 +66,33 @@ def mainwork(filename):
     global CHUNKS_TOTAL_COUNT#chunks编号
     global FILESIZE
     global chunk_bytes_list
-    with open(filename,'rb') as fp:
-        chunk_bytes_list=[True]#初始化变量用于起始循环
-        while chunk_bytes_list[0]:#直到fp读完，chunk_bytes_list被填充为None
-            chunks_split(fp)#调用函数chunks_split并将重置chunk_bytes_list
-            #根据chunks_split函数重置变量chunk_bytes_list的实际长度申请Pool
-            p=Pool(len(chunk_bytes_list))
-            for i in range(len(chunk_bytes_list)):
-                if chunk_bytes_list[i]:#过滤掉list变量中出现的None值
-                    p.apply_async(chunks_do_hash,args=((chunk_bytes_list[i],CHUNKS_TOTAL_COUNT,q),))
-                    #每一个非空值的chunk_bytes_list的值增加一个
-                    #CHUNKS_TOTAL_COUNT的编号计数。
-                    CHUNKS_TOTAL_COUNT+=1
-            p.close()
-            p.join()#chunks_do_hash子进程全部完成后继续操作fp重新申请进程池
-        FILESIZE=fp.tell()
+    global FILENAME
+    FILENAME=os.path.split(ARGS[-1])[-1]
+    try:
+        with open(filename,'rb') as fp:
+            chunk_bytes_list=[True]#初始化变量用于起始循环
+            while chunk_bytes_list[0]:#直到fp读完，chunk_bytes_list被填充为None
+                chunks_split(fp)#调用函数chunks_split并将重置chunk_bytes_list
+                #根据chunks_split函数重置变量chunk_bytes_list的实际长度申请Pool
+                p=Pool(len(chunk_bytes_list))
+                for i in range(len(chunk_bytes_list)):
+                    if chunk_bytes_list[i]:#过滤掉list变量中出现的None值
+                        p.apply_async(chunks_do_hash,args=((chunk_bytes_list[i],CHUNKS_TOTAL_COUNT,q),))
+                        #每一个非空值的chunk_bytes_list的值增加一个
+                        #CHUNKS_TOTAL_COUNT的编号计数。
+                        CHUNKS_TOTAL_COUNT+=1
+                p.close()
+                p.join()#chunks_do_hash子进程全部完成后继续操作fp重新申请进程池
+            FILESIZE=fp.tell()
+    except FileNotFoundError:
+        FILENAME='NULL'
+        print('useage:ed2k-link filename\ned2k-link a NULL file whit 0 byte for sample:')
 if __name__ == '__main__':
+    if len(sys.argv) == 1:
+        print('useage:ed2k-link filename')
+        exit()
     q=Manager().Queue()
-    mainwork(ARGS[1])
+    mainwork(ARGS[-1])
     queue_get(q)
     hash_code=ed2k_hash(CHUNKS_MD4_DICT)
     #用parse.quote(FILENAME)将str类型进行encode操作，并转换成带%的十六进制文本
